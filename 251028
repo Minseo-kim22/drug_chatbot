@@ -246,4 +246,4 @@ def start_chatbot():
 # 챗봇 시작
 if __name__ == "__main__":
     start_chatbot()
-```eof
+
