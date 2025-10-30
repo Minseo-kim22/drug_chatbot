@@ -3,7 +3,7 @@ import re
 
 # 1. 데이터 로드 및 전처리
 try:
-    df = pd.read_csv(r'C:\Users\NewAdmin\.vscode\drug-interaction-app\druglist_no_combined_use.csv')
+    df = pd.read_csv(r'C:\Users\NewAdmin\.vscode\drug-interaction-app\\druglist_no_combined_use.csv')
     df['상세정보'] = df['상세정보'].fillna('상호작용 정보 없음')
     print("✅ 약물 상호작용 데이터 로드 성공!")
 except FileNotFoundError:
