@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 import re
 
-# 1. 데이터 로드 (bot_v9.11.py 방식 사용)
+# 1. 데이터 로드 
 @st.cache_data
 def load_data():
     """druglist.csv 파일을 로드하고 캐시에 저장합니다."""
-    # 실제 파일 경로에 맞게 'druglist.csv' 또는 '통합 문서1.xlsx - Sheet1.csv'로 수정 필요
+    # 파일 경로는 bot_v9.11.py를 따릅니다.
     file_path = r'druglist.csv' 
     try:     
-        # dtype=str로 변경하여 로드 시 자료형 문제 방지
         df = pd.read_csv(file_path, encoding='utf-8', dtype=str) 
         df['상세정보'] = df['상세정보'].fillna('상호작용 정보 없음')
     
@@ -44,31 +43,28 @@ def clean_query(query):
 @st.cache_data 
 def find_drug_info_optimized(df, query):
     """[V6] (상호작용 검색용) 쿼리한 약물 '자체'의 제품명/성분명만 효율적으로 검색합니다."""
+    # bot_v9.11.py 함수 그대로 유지
     cleaned_query = clean_query(query)
     original_query_lower = str(query).strip().lower()
     search_patterns = {cleaned_query, original_query_lower}
     search_patterns.discard('')
     
-    if not search_patterns:
-        return None
+    if not search_patterns: return None
     
     valid_patterns = [re.escape(item) for item in search_patterns if item]
-    if not valid_patterns:
-        return None
+    if not valid_patterns: return None
     search_pattern_re = "|".join(valid_patterns)
 
     drugs_set = set()
 
     try:
-        mask_A = df['제품명A_lower'].str.contains(search_pattern_re, na=False) | \
-                 df['성분명A_lower'].str.contains(search_pattern_re, na=False)
+        mask_A = df['제품명A_lower'].str.contains(search_pattern_re, na=False) | df['성분명A_lower'].str.contains(search_pattern_re, na=False)
         results_A = df[mask_A]
         if not results_A.empty:
             drugs_set.update(results_A['제품명A_lower'].dropna())
             drugs_set.update(results_A['성분명A_lower'].dropna())
 
-        mask_B = df['제품명B_lower'].str.contains(search_pattern_re, na=False) | \
-                 df['성분명B_lower'].str.contains(search_pattern_re, na=False)
+        mask_B = df['제품명B_lower'].str.contains(search_pattern_re, na=False) | df['성분명B_lower'].str.contains(search_pattern_re, na=False)
         results_B = df[mask_B]
         if not results_B.empty:
             drugs_set.update(results_B['제품명B_lower'].dropna())
@@ -78,28 +74,23 @@ def find_drug_info_optimized(df, query):
         print(f"DEBUG: RegEx error in find_drug_info_optimized - {e} (Pattern: {search_pattern_re})")
         return None 
         
-    if not drugs_set:
-        return None 
+    if not drugs_set: return None 
     
     final_set = {item for item in drugs_set if item and pd.notna(item) and str(item) != 'nan'}
-
-    if not final_set:
-        return None
-
+    if not final_set: return None
     return final_set
     
 # --------------------------------------------------------------------------------------------------
-# 🌟 (신규) 제품 목록 추출 함수: 성분 꼬리 질문을 위해 사용
+# 🌟 (추가) 제품 목록 추출 함수: 성분 꼬리 질문을 위해 사용
 # --------------------------------------------------------------------------------------------------
 def get_product_list(df, drug_query):
-    """사용자 쿼리로부터 관련 제품명 목록을 추출합니다 (성분 추출 대신 사용)."""
+    """사용자 쿼리로부터 관련 제품명 목록을 추출합니다."""
     
-    # 쿼리 전처리: 용량/제형 단위를 제거하고 숫자만 남겨서 비교 유연성 확보 (최신 성분 검색 로직 사용)
+    # 쿼리 전처리: 용량/제형 단위를 제거하고 숫자만 남겨서 비교 유연성 확보
     cleaned_query = re.sub(r'\(.*?\)|\[.*?\]|주사제|정제|캡슐|시럽|시럽제|시럽액|정|주|액|제\b|밀리그램|그램|mg|g|ml|l', '', drug_query, flags=re.IGNORECASE).strip().lower()
-    cleaned_query = cleaned_query.replace('_', '').replace(' ', '')
+    cleaned_query = cleaned_query.replace('_', '').replace(' ', '').strip()
     
-    if not cleaned_query:
-        return set()
+    if not cleaned_query: return set()
 
     try:
         # 데이터프레임 제품명 전처리 함수
@@ -114,11 +105,11 @@ def get_product_list(df, drug_query):
         product_names_a = df['제품명A'].apply(preprocess_product_name_for_match)
         product_names_b = df['제품명B'].apply(preprocess_product_name_for_match)
         
+        # 쿼리 전처리 결과와 전처리된 제품명이 정확히 일치하는 행을 찾습니다.
         search_condition = (product_names_a == cleaned_query) | (product_names_b == cleaned_query)
         search_results = df[search_condition]
 
-        if search_results.empty:
-            return set()
+        if search_results.empty: return set()
 
         # 제품명 A와 제품명 B 컬럼의 유니크한 '실제 값'을 추출 (전처리 전의 값)
         products = set(search_results['제품명A']).union(set(search_results['제품명B']))
@@ -132,42 +123,43 @@ def get_product_list(df, drug_query):
         return set()
 
 # --------------------------------------------------------------------------------------------------
-# 🌟 (최신 수정) 주성분 추출 함수: 단일 제품에 대한 성분 추출 시 사용
+# 🌟 (추가) 주성분 추출 함수: 단일 제품에 대한 성분 추출 시 사용
 # --------------------------------------------------------------------------------------------------
 def get_main_component(df, drug_query):
     """사용자 쿼리로부터 주성분을 정확히 추출합니다. (단일 제품 선택 시 사용)"""
     
-    # 쿼리 전처리: 용량/제형 단위를 제거하고 숫자만 남겨서 비교 유연성 확보
+    # 쿼리 전처리 (get_product_list와 동일)
     cleaned_query = re.sub(r'\(.*?\)|\[.*?\]|주사제|정제|캡슐|시럽|시럽제|시럽액|정|주|액|제\b|밀리그램|그램|mg|g|ml|l', '', drug_query, flags=re.IGNORECASE).strip().lower()
     cleaned_query = cleaned_query.replace('_', '').replace(' ', '')
     
-    if not cleaned_query:
-        return set()
+    if not cleaned_query: return set()
 
     try:
         # 제품명 전처리 함수 (get_product_list와 동일)
+        # 데이터프레임 제품명 전처리 함수 (숫자만 남기도록 공격적으로 전처리)
         def preprocess_product_name_for_match(name):
              if pd.isna(name): return ''
              name_str = str(name).lower()
+             
              name_str = re.sub(r'\((.*?)\)|\[.*?\]', '', name_str).strip() 
              name_str = re.sub(r'밀리그램|그램|mg|g|ml|l|정|주|캡슐|액|제|\b', '', name_str, flags=re.IGNORECASE)
              name_str = name_str.replace('_', '').replace(' ', '')
-             return name_str
+             
+             # 🌟 [수정] 최종적으로 공백 및 불필요한 문자 한 번 더 제거
+             return name_str.strip()
 
         product_names_a = df['제품명A'].apply(preprocess_product_name_for_match)
         product_names_b = df['제품명B'].apply(preprocess_product_name_for_match)
         
-        cleaned_query_lower = cleaned_query.lower()
-
         valid_components = set()
 
         # 제품명 A (C열)와 일치한 경우, 성분 A (A열)의 값만 추출
-        match_A_condition = product_names_a == cleaned_query_lower
+        match_A_condition = product_names_a == cleaned_query
         components_A = df[match_A_condition]['성분명A'].dropna().str.lower().tolist()
         valid_components.update(components_A)
 
         # 제품명 B (F열)와 일치한 경우, 성분 B (D열)의 값만 추출
-        match_B_condition = product_names_b == cleaned_query_lower
+        match_B_condition = product_names_b == cleaned_query
         components_B = df[match_B_condition]['성분명B'].dropna().str.lower().tolist()
         valid_components.update(components_B)
         
@@ -182,9 +174,9 @@ def get_main_component(df, drug_query):
 
 
 def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
-    """ [V8] 상호작용 검색 로직 (bot_v9.11.py와 app_ver2.py 로직 통합) """
+    """ [V8] 상호작용 검색 로직 (bot_v9.11.py 로직 유지) """
     
-    # bot_v9.11.py의 로직을 사용 (함수명만 check_drug_interaction_flexible로 통일)
+    # bot_v9.11.py 함수 그대로 유지
     set_A = find_drug_info_optimized(df, drug_A_query)
     set_B = find_drug_info_optimized(df, drug_B_query)
 
@@ -203,11 +195,9 @@ def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
     pattern_B = "|".join(valid_patterns_B)
 
     try:
-        # A in Col 1 & B in Col 2
         cols_A = (df['제품명A_lower'].str.contains(pattern_A, na=False, case=False) | df['성분명A_lower'].str.contains(pattern_A, na=False, case=False))
         cols_B = (df['제품명B_lower'].str.contains(pattern_B, na=False, case=False) | df['성분명B_lower'].str.contains(pattern_B, na=False, case=False))
 
-        # B in Col 1 & A in Col 2
         cols_C = (df['제품명A_lower'].str.contains(pattern_B, na=False, case=False) | df['성분명A_lower'].str.contains(pattern_B, na=False, case=False))
         cols_D = (df['제품명B_lower'].str.contains(pattern_A, na=False, case=False) | df['성분명B_lower'].str.contains(pattern_A, na=False, case=False))
         
@@ -222,7 +212,7 @@ def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
         return "안전", f"'{drug_A_query}'와 '{drug_B_query}' 간의 상호작용 정보가 없습니다."
 
     
-    # 쿼리 자체에 대한 Specific 필터링 (bot_v9.11.py 로직 사용)
+    # 쿼리 자체에 대한 Specific 필터링 
     query_A_lower = clean_query(drug_A_query)
     query_B_lower = clean_query(drug_B_query)
 
@@ -239,7 +229,7 @@ def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
 
     specific_interactions = interactions[mask_A_specific & mask_B_specific]
     
-    interactions_to_display = interactions # 기본값 = 모든 성분 일치 결과
+    interactions_to_display = interactions 
     
     if not specific_interactions.empty:
         interactions_to_display = specific_interactions
@@ -265,7 +255,6 @@ def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
     highest_risk_level = -1 
     reasons = []
     
-    # 상호작용 정보 출력 시 제품명/성분명 라벨 추가
     for index, row in interactions_to_display.iterrows():
         detail_str = str(row['상세정보'])
         if detail_str == '상호작용 정보 없음':
@@ -315,7 +304,9 @@ def check_drug_interaction_flexible(df, drug_A_query, drug_B_query):
     
     return risk_label, "\n\n".join(reasons)
 
+# --------------------------------------
 # 3. Streamlit 웹사이트 UI 코드 
+# --------------------------------------
 st.title("💊 약물 상호작용 챗봇")
 st.caption("캡스톤 프로젝트: 약물 상호작용 정보 검색 챗봇")
 
@@ -332,14 +323,14 @@ if "initial_query" not in st.session_state:
 
 if not st.session_state.messages:
     st.session_state.messages.append(
-        {"role": "assistant", "content": "안녕하세요! 약물 상호작용 챗봇입니다.\n\n[질문 예시]\n1. 타이레놀 주성분\n2. 타이레놀과 부루펜을 같이 복용해도 돼?"}
+        {"role": "assistant", "content": "안녕하세요! 약물 상호작용 챗봇입니다.\n\n[질문 예시]\n1. 타이레놀 주성분이 뭐야?\n2. 타이레놀과 부루펜을 같이 복용해도 돼?"}
     )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 🌟 버튼 클릭 시 호출될 콜백 함수 정의 (가장 위에서 정의)
+# 🌟 버튼 클릭 시 호출될 콜백 함수 정의 
 def handle_selection(product_name):
     # 성분 추출
     components = get_main_component(df, product_name)
@@ -368,7 +359,11 @@ else:
     else:
         # 꼬리 질문 상태일 때는 입력창 비활성화 (버튼만 사용)
         prompt = None
-        st.write("⬆️ 위에서 제품명을 선택해주세요.") 
+        # 마지막 봇 메시지 아래에만 "선택해주세요" 힌트 출력
+        if st.session_state.messages[-1]['role'] == 'assistant': 
+            with st.chat_message("assistant"):
+                st.write("⬆️ 위에서 제품명을 선택해주세요.") 
+        
 
     if prompt: # 일반적인 프롬프트가 입력되었을 때만 처리
         
@@ -380,15 +375,15 @@ else:
         st.session_state.initial_query = prompt # 초기 쿼리 저장
         
         # 1. 성분 질문
-        # 🌟 RegEx 수정: '성분' 또는 '주성분' 모두 인식
+        # 🌟 RegEx 수정: "뭐야?/알려줘"로 끝남
         match_component = re.match(r'(.+?)\s*(?:주성분|성분)[이]?\s*(?:뭐야|알려줘)?\??$', prompt.strip())
 
         if match_component:
             drug_name = match_component.group(1).strip('() ')
-            drug_name = re.sub(r'[의]$', '', drug_name).strip()
+            drug_name = re.sub(r'[의]$', '', drug_name).strip() # 불필요한 조사 '의' 제거
             
             if drug_name:
-                # 🌟 제품 목록을 가져옵니다.
+                # 🌟 get_product_list를 사용하여 모든 관련 제품 목록을 가져옵니다.
                 products = get_product_list(df, drug_name) 
                 
                 if not products:
@@ -412,8 +407,7 @@ else:
             else:
                 reply_message = "❌ 어떤 약물의 성분을 알고 싶으신가요? 약물 이름을 입력해주세요."
         
-        # 2. 상호작용 질문 (reply_message가 비어있을 때만 실행)
-        # bot_v9.11.py의 상호작용 RegEx 사용
+        # 2. 상호작용 질문 (bot_v9.11.py 로직 유지)
         match_interaction = re.match(r'(.+?)\s*(?:이랑|랑|과|와|하고)\s+(.+?)(?:를|을)?\s+(?:같이|함께)\s+(?:복용해도|먹어도)\s+(?:돼|되나|될까|되나요)\??', prompt.strip())
         
         if not match_interaction:
@@ -425,6 +419,7 @@ else:
              match_interaction_simple = re.match(r'^\s*([^\s].*?)\s+([^\s].*?)\s*$', prompt.strip())
              if match_interaction_simple:
                  match_interaction = match_interaction_simple
+
 
         if match_interaction and not reply_message: # reply_message가 비어있을 때만 실행
             drug_A_query = match_interaction.group(1).strip('() ')
@@ -445,7 +440,7 @@ else:
         
         # 3. 일반적인 응답
         elif not match_component and not match_interaction:
-            reply_message = "🤔 죄송합니다. 질문 형식을 이해하지 못했습니다.\n\n   **[질문 예시]**\n   * 타이레놀과 부루펜\n   * 타이레놀 주성분"
+            reply_message = "🤔 죄송합니다. 질문 형식을 이해하지 못했습니다.\n\n   **[질문 예시]**\n   * 타이레놀과 부루펜\n   * 타이레놀 주성분이 뭐야?"
 
         st.session_state.messages.append({"role": "assistant", "content": reply_message})
         

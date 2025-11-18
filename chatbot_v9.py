@@ -336,7 +336,7 @@ if df is None:
  
     st.error("데이터 로드 실패로 챗봇을 실행할 수 없습니다.")
 else:
-    if prompt := st.chat_input("질문을 입력하세요... (예: 타이레놀(500mg)과 아스피린)"):
+    if prompt := st.chat_input("질문을 입력하세요... (예: 타이레놀과 부루펜)"):
  
         
         st.session_state.messages.append({"role": "user", "content": prompt})
