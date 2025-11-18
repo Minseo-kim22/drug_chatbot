@@ -1,1 +1,6 @@
+<<<<<<< HEAD
 *.csv filter=lfs diff=lfs merge=lfs -text
+=======
+druglist.csv filter=lfs diff=lfs merge=lfs -text
+>>>>>>> 06fd88bfb727761c9f6123178eaa93bbcdc542b1
+*.psd filter=lfs diff=lfs merge=lfs -text
