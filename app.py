@@ -85,8 +85,16 @@ def check_interaction(df, prod_A, prod_B):
         
         # 위험도 분석
         details = interactions['상세정보'].unique()
-        danger = ["사망", "흥분", "정신착란", "금기", "투여 금지", "독성", "심각한", "부정맥", "위험 증가", "병용금기", "쇼크", "발작"]
-        caution = ["주의", "상승 가능", "증가", "감소", "제한적", "조절", "신중"]
+        danger = ["금기", "투여 금지", "독성 증가", "치명적인", "심각한", "유산 산성증", 
+        "고칼륨혈증", "심실성 부정맥", "위험성 증가", "위험 증가", "심장 부정맥", 
+        "QT간격 연장 위험 증가", "QT연장", "심부정맥", "중대한", "심장 모니터링", 
+        "병용금기", "Torsade de pointes 위험 증가", "위험이 증가함", 
+        "약물이상반응 발생 위험", "독성", "허혈", "혈관경련",
+        "횡문근융해와 같은 중증의 근육이상 보고"]
+        caution = ["치료 효과가 제한적", "중증의 위장관계 이상반응", "Alfuzosin 혈중농도 증가", 
+        "양쪽 약물 모두 혈장농도 상승 가능", "Amiodarone 혈중농도 증가", 
+        "혈중농도 증가", "혈장 농도 증가", 
+        "Finerenone 혈중농도의 현저한 증가가 예상됨"]
         
         risk, msgs = "안전", []
         for d in details:
@@ -134,7 +142,7 @@ if c1.button("💊 성분 검색", use_container_width=True):
 
 if c2.button("⚠️ 상호작용 분석", use_container_width=True):
     st.session_state.mode = "int"
-    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 타이레놀)"}]
+    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 이지엔)"}]
     st.session_state.selecting = False
     st.session_state.resolved = [] # 초기화
     st.rerun()
@@ -193,6 +201,9 @@ if not st.session_state.selecting:
         
         # 2. 상호작용 분석 결과 (다중 분석 지원)
         elif st.session_state.mode == "int":
+            # 면책 조항 문구 정의 및 추가
+            disclaimer = "\n\n---\n\n**🔔 본 정보는 약물 상호작용 데이터베이스를 기반으로 합니다. 최종적인 의학적 판단 및 복약 지도는 반드시 전문가(의사, 약사)와 상의하십시오.**"
+
             if len(final_drugs) < 2:
                 st.session_state.messages.append({"role": "assistant", "content": "❌ 비교할 약물이 부족합니다. (최소 2개 입력)"})
             else:
@@ -214,6 +225,7 @@ if not st.session_state.selecting:
                     final_msg = "### ⚠️ 분석 결과\n\n" + "\n\n---\n\n".join(report)
                 else:
                     final_msg = f"✅ 선택하신 {len(final_drugs)}개 약물 간에 발견된 위험 상호작용이 없습니다."
+                
                 
                 st.session_state.messages.append({"role": "assistant", "content": final_msg})
         
