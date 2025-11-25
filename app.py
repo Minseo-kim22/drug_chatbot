@@ -114,16 +114,16 @@ def check_interaction(df, prod_A, prod_B):
             found = False
             for k in danger:
                 if k in d_str:
-                    risk = "위험"; msgs.append(f"🚨 **위험**: {d_str}"); found=True; break
+                    risk = "위험"; msgs.append(f"🚨 **위험**:\n{d_str}"); found=True; break
             if not found:
                 for k in caution:
                     if k in d_str:
                         if risk!="위험": risk="주의"
-                        msgs.append(f"⚠️ **주의**: {d_str}"); break
+                        msgs.append(f"⚠️ **주의**:\n{d_str}"); break
         
         if not msgs:
             risk = "정보 확인"
-            msgs.append(f"ℹ️ **정보**: {details[0]}")
+            msgs.append(f"ℹ️ **정보**:\n{details[0]}")
             
         return risk, "\n".join(msgs)
     except:
@@ -168,7 +168,7 @@ if c1.button("💊 성분 검색", use_container_width=True):
 
 if c2.button("⚠️ 상호작용 분석", use_container_width=True):
     st.session_state.mode = "int"
-    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 타이레놀)"}]
+    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 이지엔)"}]
     st.session_state.selecting = False
     st.session_state.resolved = [] # 초기화
     st.rerun()
