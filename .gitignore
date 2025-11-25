@@ -1,2 +1,15 @@
+<<<<<<< HEAD
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+/app.py
+/drug_db_builder.py
+/interaction_checker.py
+/interaction_logic.py
+=======
 # Streamlit secrets
 .streamlit/secrets.toml
+>>>>>>> 06fd88bfb727761c9f6123178eaa93bbcdc542b1
