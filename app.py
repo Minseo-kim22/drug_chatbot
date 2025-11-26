@@ -168,7 +168,7 @@ if c1.button("💊 성분 검색", use_container_width=True):
 
 if c2.button("⚠️ 상호작용 분석", use_container_width=True):
     st.session_state.mode = "int"
-    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 타이레놀)"}]
+    st.session_state.messages = [{"role": "assistant", "content": "⚠️ **상호작용 분석** 모드입니다. 약물들을 입력해주세요.\n(예: 네시나, 보노렉스, 이지엔)"}]
     st.session_state.selecting = False
     st.session_state.resolved = [] # 초기화
     st.rerun()
