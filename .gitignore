@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -8,3 +9,7 @@ __pycache__/
 /drug_db_builder.py
 /interaction_checker.py
 /interaction_logic.py
+=======
+# Streamlit secrets
+.streamlit/secrets.toml
+>>>>>>> 1cf38c7ecadd3c8696ad82d24069d2ee1e332215
